@@ -1,0 +1,17 @@
+{
+  "name": "island-fort",
+  "version": "1.0.0",
+  "description": "Island Fort Game",
+  "main": "src/index.html",
+  "repository": "git@github.com:mtreinik/island-fort.git",
+  "author": "Mikko Reinikainen <mikko.reinikainen@iki.fi>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "lint": "./node_modules/.bin/prettier-standard --lint; ./node_modules/.bin/prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^2.2.1",
+    "prettier-standard": "^16.4.1"
+  }
+}
