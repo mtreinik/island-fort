@@ -4,5 +4,5 @@ Island Fort Game
 
 ## TODO
 
-- make bomb collide with each other
 - add more piece types
+- prevent pieces of two players from colliding with each other

@@ -22,7 +22,17 @@ const CROSSHAIR_RADIUS = 20
 const SKY = 0
 const SEA = 1
 const LAND = 2
-const STONE = 3
+const STONE1 = 3
+const STONE2 = 4
+const STONE3 = 5
+
+const blockColors = {
+  [SEA]: 'royalblue',
+  [LAND]: 'forestgreen',
+  [STONE1]: 'gray',
+  [STONE2]: 'darkgray',
+  [STONE3]: 'lightgray',
+}
 
 const SHOOT = 'Attack!'
 const BUILD = 'Build the castle!'
@@ -40,7 +50,7 @@ let mode = BUILD
 let modeStartTime = getTimeNow()
 
 let sprites = []
-const colors = ['purple', 'yellow']
+const playerColors = ['purple', 'yellow']
 
 const names = ['Player 1', 'Player 2']
 
@@ -280,21 +290,14 @@ function drawMap(map) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      switch (map[y][x]) {
-        case SEA:
-          drawBlock(x, y, 'royalblue')
-          break
-        case LAND:
-          drawBlock(x, y, 'forestgreen')
-          break
-        case STONE:
-          drawBlock(x, y, 'gray')
-          break
+      if (map[y][x] !== SKY) {
+        const color = blockColors[map[y][x]]
+        drawBlock(x, y, color)
       }
     }
   }
   names.forEach((name, index) => {
-    ctx.fillStyle = colors[index]
+    ctx.fillStyle = playerColors[index]
     ctx.fillText(name, (index * canvas.width) / 2 + canvas.width / 4, 10)
   })
 }
@@ -303,7 +306,11 @@ function drawPieces(pieces) {
   pieces.forEach(piece => {
     const shape = rotate(shapes[piece.shape], piece.rotation)
     shape.forEach(block => {
-      drawBlock(piece.x + block[0], piece.y + block[1], colors[piece.player])
+      drawBlock(
+        piece.x + block[0],
+        piece.y + block[1],
+        playerColors[piece.player]
+      )
     })
   })
 }
@@ -312,8 +319,8 @@ function drawCannons(cannons) {
   const dx = canvas.width / width
   const dy = canvas.height / height
   cannons.forEach(cannon => {
-    ctx.fillStyle = colors[cannon.player]
-    ctx.strokeStyle = colors[cannon.player]
+    ctx.fillStyle = playerColors[cannon.player]
+    ctx.strokeStyle = playerColors[cannon.player]
     ctx.fillText('🔫', cannon.cannonX * dx + dx / 2, cannon.cannonY * dy)
   })
 }
@@ -324,14 +331,14 @@ function drawCrosshairs(cannons, readyToShoot) {
   const halfDx = Math.floor(dx / 2)
   const halfDy = Math.floor(dy / 2)
   cannons.forEach(cannon => {
-    ctx.fillStyle = colors[cannon.player]
+    ctx.fillStyle = playerColors[cannon.player]
     ctx.fillText(
       cannon.timer > 0 ? cannon.timer : '',
       cannon.x * dx + CROSSHAIR_RADIUS * 2,
       cannon.y * dy
     )
 
-    ctx.strokeStyle = colors[cannon.player]
+    ctx.strokeStyle = playerColors[cannon.player]
     ctx.lineWidth = readyToShoot && cannon.timer <= 0 ? 10 : 4
     ctx.beginPath()
     ctx.arc(
@@ -363,7 +370,9 @@ function animatePieces(pieces, map) {
     if (now > piece.lastUpdated + piece.fallTime) {
       redraw = true
       const isSolidHit = isCollision({ ...piece, y: piece.y + 1 }, map, [
-        STONE,
+        STONE1,
+        STONE2,
+        STONE3,
         LAND,
       ])
       const isUnderwater = isTotalCollision(
@@ -437,7 +446,11 @@ function animateBombs(bombs, map) {
       if (collision) {
         const { x, y } = collision
         if (map[y][x] !== SKY) {
-          if (map[y][x] === STONE) {
+          if (map[y][x] === STONE1) {
+            map[y][x] = STONE2
+          } else if (map[y][x] === STONE2) {
+            map[y][x] = STONE3
+          } else if (map[y][x] === STONE3) {
             map[y][x] = SKY
           }
           sprites.push(generateSprite(x, y, '💥', EXPLOSION_DURATION))
@@ -455,8 +468,8 @@ function collapseCastles(map) {
   let shouldIterate = false
   for (let x = 0; x < width; x++) {
     for (let y = height - 1; y > 0; y--) {
-      if (map[y][x] === SKY && map[y - 1][x] === STONE) {
-        map[y][x] = STONE
+      if (map[y][x] === SKY && [STONE1, STONE2, STONE3].includes(map[y - 1][x])) {
+        map[y][x] = map[y - 1][x]
         map[y - 1][x] = SKY
         shouldIterate = true
       }
@@ -604,7 +617,7 @@ function isCollision(piece, map, materials) {
 
 function drawPieceOnMap(piece, map) {
   rotate(shapes[piece.shape], piece.rotation).forEach(block => {
-    map[piece.y + block[1]][piece.x + block[0]] = STONE
+    map[piece.y + block[1]][piece.x + block[0]] = STONE1
   })
   return map
 }
@@ -614,7 +627,9 @@ function movePieces(player, x, y) {
     if (piece.player === player) {
       if (
         !isCollision({ ...piece, x: piece.x + x, y: piece.y + y }, map, [
-          STONE,
+          STONE1,
+          STONE2,
+          STONE3,
           LAND,
         ])
       ) {
@@ -749,7 +764,6 @@ document.onkeydown = function (e) {
         if (mode === SHOOT) {
           shootCannons(0)
         }
-        e.preventDefault()
         break
       case 'ArrowLeft':
         moveCrosshair(1, -1, 0)
@@ -772,6 +786,9 @@ document.onkeydown = function (e) {
         toggleAnimation()
         break
     }
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault()
   }
 }
 
