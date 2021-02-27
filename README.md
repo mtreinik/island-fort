@@ -2,7 +2,6 @@
 
 Island Fort Game
 
-## TODO
 
-- add more piece types
-- prevent pieces of two players from colliding with each other
+- 2D version: `index2d.html`
+- Isometric 3D version: `index.html` 
