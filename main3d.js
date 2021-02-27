@@ -42,7 +42,7 @@ const WAIT_FOR_BOMBS = 'wait for bombs'
 const COLLAPSE_AFTER_BUILD = 'collapse after build'
 
 function getTimeNow() {
-  return new Date().getTime()
+  return performance.now()
 }
 
 let isDebugMode = false
@@ -425,7 +425,6 @@ function drawBlock(x, y, z, fillStyle, strokeStyle = '#575757') {
     y,
     z
   )
-
   ctx.strokeStyle = strokeStyle
   ctx.lineWidth = 1
   ctx.beginPath()
@@ -708,10 +707,13 @@ function previewBombs(cannons) {
 }
 
 let previousTimer
+let previousTimeNow
+let fps
 
 function updateAnimation() {
   let timer = ''
   let isModeChanged = false
+  const timeNow = getTimeNow()
 
   function setMode(newMode) {
     mode = newMode
@@ -785,6 +787,10 @@ function updateAnimation() {
     redraw = true
   }
   previousTimer = timer
+
+  fps = Math.round(1000 / (timeNow - previousTimeNow)) + ' fps'
+  previousTimeNow = timeNow
+
   if (redraw) {
     drawMap(map)
     if (mode === WAIT_FOR_BOMBS) {
@@ -809,6 +815,7 @@ function updateAnimation() {
       ctx.fillText(mode, canvas.width / 2, 10)
       ctx.fillText(timer, canvas.width / 2, 60)
     }
+    ctx.fillText(fps, canvas.width - 60, canvas.height - 60)
     drawSprites(sprites)
     redraw = false
   }
