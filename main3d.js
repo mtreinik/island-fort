@@ -428,21 +428,40 @@ function drawBlock(x, y, z, fillStyle, strokeStyle = '#575757') {
   ctx.strokeStyle = strokeStyle
   ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.moveTo(xCanvas, yCanvas)
-  ctx.lineTo(xCanvas, yCanvas + ySize)
-  ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
-  ctx.lineTo(xCanvas + xSize + xOffset, yCanvas + ySize - yOffset)
-  ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
-  ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
-  ctx.lineTo(xCanvas, yCanvas)
-  if (fillStyle) {
-    ctx.fill()
+
+  if (
+    fillStyle &&
+    ((z === 0 && map[y][x].length > 1) ||
+      (z === 1 && map[y][x].length > 2 && map[y + 1][x].length > 1))
+  ) {
+    // skip drawing block
+  } else if (fillStyle && z === 0 && x < width - 1 && y < height - 1) {
+    ctx.moveTo(xCanvas, yCanvas)
+    ctx.lineTo(xCanvas + xSize, yCanvas)
+    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+    ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
+    ctx.lineTo(xCanvas, yCanvas)
+    if (fillStyle) {
+      ctx.fill()
+    }
+    ctx.stroke()
+  } else {
+    ctx.moveTo(xCanvas, yCanvas)
+    ctx.lineTo(xCanvas, yCanvas + ySize)
+    ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
+    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas + ySize - yOffset)
+    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+    ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
+    ctx.lineTo(xCanvas, yCanvas)
+    if (fillStyle) {
+      ctx.fill()
+    }
+    ctx.lineTo(xCanvas + xSize, yCanvas)
+    ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
+    ctx.moveTo(xCanvas + xSize, yCanvas)
+    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+    ctx.stroke()
   }
-  ctx.lineTo(xCanvas + xSize, yCanvas)
-  ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
-  ctx.moveTo(xCanvas + xSize, yCanvas)
-  ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
-  ctx.stroke()
 }
 
 function drawMap(map) {
