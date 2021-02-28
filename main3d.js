@@ -340,7 +340,7 @@ function findCollision(bomb, timeNow, map) {
 // used in debug mode to visualize trajectory
 function previewBomb(bomb) {
   bomb.trajectory.forEach(point => {
-    drawBlock(point.x, point.y, point.z, null, 'white')
+    drawBlock(ctx, point.x, point.y, point.z, null, 'white')
     const { xCanvas, yCanvas, xSize, ySize } = get2DProjection(
       point.x,
       point.y,
@@ -358,7 +358,7 @@ function previewBomb(bomb) {
     ctx.arc(xCanvas + xSize / 2, yCanvas + ySize / 2, 4, 0, Math.PI * 2, true)
     ctx.stroke()
 
-    // drawBlock(point.x, point.y, 1, 'gray')
+    // drawBlock(ctx, point.x, point.y, 1, 'gray')
     // const { xCanvas: xCanvasSea, yCanvas: yCanvasSea } = get2DProjection(point.x, point.y, 1)
     // ctx.fillStyle = 'yellow'
     // ctx.fillText(point.label, xCanvasSea, yCanvasSea)
@@ -418,7 +418,7 @@ function get2DProjection(x, y, z) {
   return { xCanvas, yCanvas, xSize, ySize, xOffset, yOffset }
 }
 
-function drawBlock(x, y, z, fillStyle, strokeStyle = '#575757') {
+function drawBlock(ctx, x, y, z, fillStyle, strokeStyle = '#575757') {
   ctx.fillStyle = fillStyle
   const { xCanvas, yCanvas, xSize, ySize, xOffset, yOffset } = get2DProjection(
     x,
@@ -464,16 +464,16 @@ function drawBlock(x, y, z, fillStyle, strokeStyle = '#575757') {
   }
 }
 
-function drawMap(map) {
+function drawMap(ctx, canvas, map, drawSea = false) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const column = map[y][x]
-      for (let z = 0; z < column.length; z++) {
+      for (let z = drawSea ? 0 : 1; z < column.length; z++) {
         const block = map[y][x][z]
         if (block) {
           const color = blockColors[block]
-          drawBlock(x, y, z, color)
+          drawBlock(ctx, x, y, z, color)
         }
       }
     }
@@ -490,9 +490,9 @@ function drawPieces(pieces) {
     shape.forEach(block => {
       const x = piece.x + block[0]
       const y = piece.y + block[1]
-      drawBlock(x, y, piece.z, playerColors[piece.player])
+      drawBlock(ctx, x, y, piece.z, playerColors[piece.player])
       const groundZ = findGroundZ(x, y) + 1
-      drawBlock(x, y, groundZ, null, 'white')
+      drawBlock(ctx, x, y, groundZ, null, 'white')
     })
   })
 }
@@ -536,14 +536,14 @@ function drawCrosshairs(cannons, readyToShoot) {
     )
     ctx.stroke()
 
-    drawBlock(cannon.x, cannon.y, cannon.z, null, ctx.strokeStyle)
+    drawBlock(ctx, cannon.x, cannon.y, cannon.z, null, ctx.strokeStyle)
   })
 }
 
 function drawBombs(bombs) {
   bombs.forEach(bomb => {
     drawText('💣', bomb.x, bomb.y, bomb.z)
-    // drawBlock(bomb.x, bomb.y, bomb.z, 'white')
+    // drawBlock(ctx, bomb.x, bomb.y, bomb.z, 'white')
   })
 }
 
@@ -811,7 +811,7 @@ function updateAnimation() {
   previousTimeNow = timeNow
 
   if (redraw) {
-    drawMap(map)
+    drawMap(ctx, canvas, map)
     if (mode === WAIT_FOR_BOMBS) {
       drawCannons(cannons)
       drawBombs(bombs)
@@ -921,18 +921,24 @@ function shootCannons(player) {
   })
 }
 
-function run() {
-  canvas = document.getElementById('canvas')
+function setupCanvasAndContext(canvas, ctx) {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
-
-  ctx = canvas.getContext('2d')
   ctx.font = FONT_SIZE + 'px Times New Roman'
   ctx.textBaseline = 'top'
   ctx.textAlign = 'center'
+}
 
-  drawMap(map)
-  drawPieces(pieces)
+function run() {
+  const backgroundCanvas = document.getElementById('backgroundCanvas')
+  const backgroundCtx = backgroundCanvas.getContext('2d')
+  setupCanvasAndContext(backgroundCanvas, backgroundCtx)
+
+  canvas = document.getElementById('canvas')
+  ctx = canvas.getContext('2d')
+  setupCanvasAndContext(canvas, ctx)
+
+  drawMap(backgroundCtx, backgroundCanvas, map, true)
 
   animationHandle = window.requestAnimationFrame(updateAnimation)
 }
