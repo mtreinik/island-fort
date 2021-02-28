@@ -1,14 +1,3 @@
-const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-)
-const renderer = new THREE.WebGLRenderer()
-renderer.setSize(window.innerWidth, window.innerHeight)
-document.body.appendChild(renderer.domElement)
-
 let canvas, ctx
 let animationHandle = null
 let redraw = false
@@ -351,23 +340,28 @@ function findCollision(bomb, timeNow, map) {
 // used in debug mode to visualize trajectory
 function previewBomb(bomb) {
   bomb.trajectory.forEach(point => {
-    drawBlock(point.x, point.y, point.z, null, 'white')
+    drawBlock(ctx, point.x, point.y, point.z, null, 'white')
     const { xCanvas, yCanvas, xSize, ySize } = get2DProjection(
       point.x,
       point.y,
       point.z
     )
 
-    // ctx.strokeStyle = point.isRising
-    //   ? point.isHorizontal
-    //     ? 'red'
-    //     : 'purple'
-    //   : point.isHorizontal
-    //     ? 'blue'
-    //     : 'cyan'
-    // ctx.beginPath()
-    // ctx.arc(xCanvas + xSize / 2, yCanvas + ySize / 2, 4, 0, Math.PI * 2, true)
-    // ctx.stroke()
+    ctx.strokeStyle = point.isRising
+      ? point.isHorizontal
+        ? 'red'
+        : 'purple'
+      : point.isHorizontal
+      ? 'blue'
+      : 'cyan'
+    ctx.beginPath()
+    ctx.arc(xCanvas + xSize / 2, yCanvas + ySize / 2, 4, 0, Math.PI * 2, true)
+    ctx.stroke()
+
+    // drawBlock(ctx, point.x, point.y, 1, 'gray')
+    // const { xCanvas: xCanvasSea, yCanvas: yCanvasSea } = get2DProjection(point.x, point.y, 1)
+    // ctx.fillStyle = 'yellow'
+    // ctx.fillText(point.label, xCanvasSea, yCanvasSea)
   })
 }
 
@@ -414,29 +408,64 @@ function generateMap() {
 }
 
 function get2DProjection(x, y, z) {
-  const xSize = renderer.getSize().width / width / 1.5
-  const ySize = renderer.getSize().height / height / 1.1
+  const xSize = canvas.width / width / 1.5
+  const ySize = canvas.height / height / 1.1
   const xOffset = xSize / 2
   const yOffset = ySize / 2
-  const xCanvas = renderer.getSize().width / 3 + x * xSize - y * xOffset
-  const yCanvas = renderer.getSize().height / 3 - z * ySize + y * yOffset
+  const xCanvas = canvas.width / 3 + x * xSize - y * xOffset
+  const yCanvas = canvas.height / 3 - z * ySize + y * yOffset
 
   return { xCanvas, yCanvas, xSize, ySize, xOffset, yOffset }
 }
 
-const geometry = new THREE.BoxGeometry()
+function drawBlock(ctx, x, y, z, fillStyle, strokeStyle = '#575757') {
+  ctx.fillStyle = fillStyle
+  const { xCanvas, yCanvas, xSize, ySize, xOffset, yOffset } = get2DProjection(
+    x,
+    y,
+    z
+  )
+  ctx.strokeStyle = strokeStyle
+  ctx.lineWidth = 1
+  ctx.beginPath()
 
-function drawBlock(x, y, z, fillStyle, strokeStyle = '#575757') {
-  const material = new THREE.MeshBasicMaterial({ color: fillStyle })
-  const cube = new THREE.Mesh(geometry, material)
-  cube.position.x = x
-  cube.position.y = -y
-  cube.position.z = z
-  scene.add(cube)
+  if (
+    fillStyle &&
+    ((z === 0 && map[y][x].length > 1) ||
+      (z === 1 && map[y][x].length > 2 && map[y + 1][x].length > 1))
+  ) {
+    // skip drawing block
+  } else if (fillStyle && z === 0 && x < width - 1 && y < height - 1) {
+    ctx.moveTo(xCanvas, yCanvas)
+    ctx.lineTo(xCanvas + xSize, yCanvas)
+    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+    ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
+    ctx.lineTo(xCanvas, yCanvas)
+    if (fillStyle) {
+      ctx.fill()
+    }
+    ctx.stroke()
+  } else {
+    ctx.moveTo(xCanvas, yCanvas)
+    ctx.lineTo(xCanvas, yCanvas + ySize)
+    ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
+    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas + ySize - yOffset)
+    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+    ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
+    ctx.lineTo(xCanvas, yCanvas)
+    if (fillStyle) {
+      ctx.fill()
+    }
+    ctx.lineTo(xCanvas + xSize, yCanvas)
+    ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
+    ctx.moveTo(xCanvas + xSize, yCanvas)
+    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+    ctx.stroke()
+  }
 }
 
-function drawMap(map, drawSea = false) {
-  scene.clear()
+function drawMap(ctx, canvas, map, drawSea = false) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const column = map[y][x]
@@ -444,7 +473,7 @@ function drawMap(map, drawSea = false) {
         const block = map[y][x][z]
         if (block) {
           const color = blockColors[block]
-          drawBlock(x, y, z, color)
+          drawBlock(ctx, x, y, z, color)
         }
       }
     }
@@ -461,9 +490,9 @@ function drawPieces(pieces) {
     shape.forEach(block => {
       const x = piece.x + block[0]
       const y = piece.y + block[1]
-      drawBlock(x, y, piece.z, playerColors[piece.player])
+      drawBlock(ctx, x, y, piece.z, playerColors[piece.player])
       const groundZ = findGroundZ(x, y) + 1
-      drawBlock(x, y, groundZ, null, 'white')
+      drawBlock(ctx, x, y, groundZ, null, 'white')
     })
   })
 }
@@ -478,43 +507,43 @@ function drawCannons(cannons) {
 
 function drawCrosshairs(cannons, readyToShoot) {
   cannons.forEach(cannon => {
-    // ctx.fillStyle = playerColors[cannon.player]
-    // const {
-    //   xCanvas,
-    //   yCanvas,
-    //   xSize,
-    //   ySize,
-    //   xOffset,
-    //   yOffset,
-    // } = get2DProjection(cannon.x, cannon.y, cannon.z)
-    //
-    // ctx.fillText(
-    //   cannon.timer > 0 ? cannon.timer : '',
-    //   xCanvas + (xSize + xOffset) / 2,
-    //   yCanvas + CROSSHAIR_RADIUS * 2 - xOffset / 2
-    // )
-    //
-    // ctx.strokeStyle = playerColors[cannon.player]
-    // ctx.lineWidth = readyToShoot && cannon.timer <= 0 ? 10 : 4
-    // ctx.beginPath()
-    // ctx.arc(
-    //   xCanvas + (xSize + xOffset) / 2,
-    //   yCanvas + (ySize - yOffset) / 2,
-    //   CROSSHAIR_RADIUS,
-    //   0,
-    //   Math.PI * 2,
-    //   true
-    // )
-    // ctx.stroke()
-    //
-    drawBlock(cannon.x, cannon.y, cannon.z, null, playerColors[cannon.player])
+    ctx.fillStyle = playerColors[cannon.player]
+    const {
+      xCanvas,
+      yCanvas,
+      xSize,
+      ySize,
+      xOffset,
+      yOffset,
+    } = get2DProjection(cannon.x, cannon.y, cannon.z)
+
+    ctx.fillText(
+      cannon.timer > 0 ? cannon.timer : '',
+      xCanvas + (xSize + xOffset) / 2,
+      yCanvas + CROSSHAIR_RADIUS * 2 - xOffset / 2
+    )
+
+    ctx.strokeStyle = playerColors[cannon.player]
+    ctx.lineWidth = readyToShoot && cannon.timer <= 0 ? 10 : 4
+    ctx.beginPath()
+    ctx.arc(
+      xCanvas + (xSize + xOffset) / 2,
+      yCanvas + (ySize - yOffset) / 2,
+      CROSSHAIR_RADIUS,
+      0,
+      Math.PI * 2,
+      true
+    )
+    ctx.stroke()
+
+    drawBlock(ctx, cannon.x, cannon.y, cannon.z, null, ctx.strokeStyle)
   })
 }
 
 function drawBombs(bombs) {
   bombs.forEach(bomb => {
     drawText('💣', bomb.x, bomb.y, bomb.z)
-    // drawBlock(bomb.x, bomb.y, bomb.z, 'white')
+    // drawBlock(ctx, bomb.x, bomb.y, bomb.z, 'white')
   })
 }
 
@@ -675,10 +704,10 @@ function animateSprites(sprites) {
 }
 
 function drawText(text, x, y, z) {
-  // const dx = canvas.width / width
-  // const dy = canvas.height / height
-  // const { xCanvas, yCanvas } = get2DProjection(x, y, z)
-  // ctx.fillText(text, xCanvas + dx / 4, yCanvas - dy / 4)
+  const dx = canvas.width / width
+  const dy = canvas.height / height
+  const { xCanvas, yCanvas } = get2DProjection(x, y, z)
+  ctx.fillText(text, xCanvas + dx / 4, yCanvas - dy / 4)
 }
 
 function drawSprites(sprites) {
@@ -782,7 +811,7 @@ function updateAnimation() {
   previousTimer = timer
 
   if (redraw) {
-    drawMap(map)
+    drawMap(ctx, canvas, map)
     if (mode === WAIT_FOR_BOMBS) {
       drawCannons(cannons)
       drawBombs(bombs)
@@ -813,9 +842,6 @@ function updateAnimation() {
     drawSprites(sprites)
     redraw = false
   }
-
-  renderer.render(scene, camera)
-
   animationHandle = window.requestAnimationFrame(updateAnimation)
 }
 
@@ -905,20 +931,18 @@ function setupCanvasAndContext(canvas, ctx) {
   ctx.font = FONT_SIZE + 'px Times New Roman'
   ctx.textBaseline = 'top'
   ctx.textAlign = 'center'
-  ctx.fillStyle = 'white'
 }
 
 function run() {
-  canvas = document.getElementById('topCanvas')
+  const backgroundCanvas = document.getElementById('backgroundCanvas')
+  const backgroundCtx = backgroundCanvas.getContext('2d')
+  setupCanvasAndContext(backgroundCanvas, backgroundCtx)
+
+  canvas = document.getElementById('canvas')
   ctx = canvas.getContext('2d')
   setupCanvasAndContext(canvas, ctx)
 
-  ctx.fillText('foo', canvas.width / 2, 10)
-
-  camera.position.x = width / 2
-  camera.position.y = -height
-  camera.position.z = width / 2
-  camera.rotation.x = 1
+  drawMap(backgroundCtx, backgroundCanvas, map, true)
 
   animationHandle = window.requestAnimationFrame(updateAnimation)
 }

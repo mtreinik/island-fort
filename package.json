@@ -13,5 +13,8 @@
   "devDependencies": {
     "prettier": "^2.2.1",
     "prettier-standard": "^16.4.1"
+  },
+  "dependencies": {
+    "three": "^0.126.0"
   }
 }
