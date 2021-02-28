@@ -726,13 +726,16 @@ function previewBombs(cannons) {
 }
 
 let previousTimer
-let previousTimeNow
-let fps
+let previousTimeNow = getTimeNow()
+let fps = 60
 
 function updateAnimation() {
   let timer = ''
   let isModeChanged = false
   const timeNow = getTimeNow()
+
+  fps = (fps * 31 + 1000 / (timeNow - previousTimeNow)) / 32
+  previousTimeNow = timeNow
 
   function setMode(newMode) {
     mode = newMode
@@ -807,9 +810,6 @@ function updateAnimation() {
   }
   previousTimer = timer
 
-  fps = Math.round(1000 / (timeNow - previousTimeNow)) + ' fps'
-  previousTimeNow = timeNow
-
   if (redraw) {
     drawMap(ctx, canvas, map)
     if (mode === WAIT_FOR_BOMBS) {
@@ -834,7 +834,11 @@ function updateAnimation() {
       ctx.fillText(mode, canvas.width / 2, 10)
       ctx.fillText(timer, canvas.width / 2, 60)
     }
-    ctx.fillText(fps, canvas.width - 60, canvas.height - 60)
+    ctx.fillText(
+      Math.round(fps) + ' fps',
+      canvas.width - 60,
+      canvas.height - 60
+    )
     drawSprites(sprites)
     redraw = false
   }
