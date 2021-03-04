@@ -418,6 +418,14 @@ function get2DProjection(x, y, z) {
   return { xCanvas, yCanvas, xSize, ySize, xOffset, yOffset }
 }
 
+function getMiniMapProjection(x, y) {
+  const miniMapDx = Math.round(canvas.width / (4 * width))
+  const miniMapDy = Math.round(canvas.height / (4 * height))
+  const miniMapX = Math.round(canvas.width * 3 / 4 + x * miniMapDx)
+  const miniMapY = Math.round(canvas.height * 3 / 4 + y * miniMapDy)
+  return { miniMapX, miniMapY, miniMapDx, miniMapDy }
+}
+
 function drawBlock(ctx, x, y, z, fillStyle, strokeStyle = '#575757') {
   ctx.fillStyle = fillStyle
   const { xCanvas, yCanvas, xSize, ySize, xOffset, yOffset } = get2DProjection(
@@ -435,32 +443,46 @@ function drawBlock(ctx, x, y, z, fillStyle, strokeStyle = '#575757') {
       (z === 1 && map[y][x].length > 2 && map[y + 1][x].length > 1))
   ) {
     // skip drawing block
-  } else if (fillStyle && z === 0 && x < width - 1 && y < height - 1) {
-    ctx.moveTo(xCanvas, yCanvas)
-    ctx.lineTo(xCanvas + xSize, yCanvas)
-    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
-    ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
-    ctx.lineTo(xCanvas, yCanvas)
-    if (fillStyle) {
-      ctx.fill()
-    }
-    ctx.stroke()
   } else {
-    ctx.moveTo(xCanvas, yCanvas)
-    ctx.lineTo(xCanvas, yCanvas + ySize)
-    ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
-    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas + ySize - yOffset)
-    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
-    ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
-    ctx.lineTo(xCanvas, yCanvas)
-    if (fillStyle) {
-      ctx.fill()
+    if (fillStyle && z === 0 && x < width - 1 && y < height - 1) {
+      // draw only top of block
+
+      ctx.moveTo(xCanvas, yCanvas)
+      ctx.lineTo(xCanvas + xSize, yCanvas)
+      ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+      ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
+      ctx.lineTo(xCanvas, yCanvas)
+      if (fillStyle) {
+        ctx.fill()
+      }
+      ctx.stroke()
+    } else {
+      // draw whole block
+
+      ctx.moveTo(xCanvas, yCanvas)
+      ctx.lineTo(xCanvas, yCanvas + ySize)
+      ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
+      ctx.lineTo(xCanvas + xSize + xOffset, yCanvas + ySize - yOffset)
+      ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+      ctx.lineTo(xCanvas + xOffset, yCanvas - yOffset)
+      ctx.lineTo(xCanvas, yCanvas)
+      if (fillStyle) {
+        ctx.fill()
+      }
+      ctx.lineTo(xCanvas + xSize, yCanvas)
+      ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
+      ctx.moveTo(xCanvas + xSize, yCanvas)
+      ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
+      ctx.stroke()
     }
-    ctx.lineTo(xCanvas + xSize, yCanvas)
-    ctx.lineTo(xCanvas + xSize, yCanvas + ySize)
-    ctx.moveTo(xCanvas + xSize, yCanvas)
-    ctx.lineTo(xCanvas + xSize + xOffset, yCanvas - yOffset)
-    ctx.stroke()
+
+    const { miniMapX, miniMapY, miniMapDx, miniMapDy }  = getMiniMapProjection(x, y)
+    if (fillStyle) {
+      ctx.fillRect(miniMapX, miniMapY, miniMapDx, miniMapDy)
+    } else {
+      ctx.strokeRect(miniMapX, miniMapY, miniMapDx, miniMapDy)
+    }
+
   }
 }
 
@@ -478,6 +500,7 @@ function drawMap(ctx, canvas, map, drawSea = false) {
       }
     }
   }
+
   names.forEach((name, index) => {
     ctx.fillStyle = playerColors[index]
     ctx.fillText(name, (index * canvas.width) / 2 + canvas.width / 4, 10)
@@ -708,6 +731,9 @@ function drawText(text, x, y, z) {
   const dy = canvas.height / height
   const { xCanvas, yCanvas } = get2DProjection(x, y, z)
   ctx.fillText(text, xCanvas + dx / 4, yCanvas - dy / 4)
+
+  const { miniMapX, miniMapY, miniMapDx, miniMapDy } = getMiniMapProjection(x, y)
+  ctx.fillText(text, miniMapX - miniMapDx / 2 + FONT_SIZE/4, miniMapY - miniMapDy / 2 - FONT_SIZE / 4)
 }
 
 function drawSprites(sprites) {
@@ -836,7 +862,7 @@ function updateAnimation() {
     }
     ctx.fillText(
       Math.round(fps) + ' fps',
-      canvas.width - 60,
+      60,
       canvas.height - 60
     )
     drawSprites(sprites)
