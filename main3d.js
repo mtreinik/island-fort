@@ -812,9 +812,10 @@ function updateAnimation() {
     )
     drawSprites(sprites)
     redraw = false
+
+    renderer.render(scene, camera)
   }
 
-  renderer.render(scene, camera)
 
   animationHandle = window.requestAnimationFrame(updateAnimation)
 }
